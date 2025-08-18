@@ -555,7 +555,7 @@ else:
 
 # --- 8. Digital Twin: Projeção por Mês (com SDOR corrigido) ---
 info_tooltip(
-    "### 💡 8. Digital Twin: Projeção por Mês",
+    "### 💡 Digital Twin: Projeção por Mês",
     "Simula a produção futura com base no SDOR (Produtividade Padrão por Funcionário por Dia), "
     "ajustado pelo turno. Use para planejar contratações, dias úteis e mudanças de turno."
 )
@@ -656,5 +656,6 @@ st.write("### 🔍 Diagnóstico do DataFrame")
 st.write(f"**Número de linhas:** {len(df)}")
 st.write(f"**Número de colunas:** {len(df.columns)}")
 st.write(f"**Colunas:** {list(df.columns)}")
+
 
 st.caption("📊 Dashboard científico de produção. Atualizado com base nos arquivos `updated_dataframe.csv` e `updated_dataframe_log.csv`.")
