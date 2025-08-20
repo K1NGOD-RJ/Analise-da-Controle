@@ -12,103 +12,13 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Modo Escuro/Light Mode Toggle ---
-st.sidebar.markdown("### 🎨 Aparência")
-use_dark_mode = st.sidebar.checkbox("🌙 Modo Escuro", value=True)
-st.sidebar.markdown("---")
-
-# Define cores com base no tema
-if use_dark_mode:
-    bg_color = "#0E1117"
-    text_color = "#FAFAFA"
-    sec_bg = "#1E293B"
-    primary_color = "#1f77b4"
-else:
-    bg_color = "#FFFFFF"
-    text_color = "#000000"
-    sec_bg = "#F0F2F6"
-    primary_color = "#1f77b4"
-
-# --- Estilo CSS Dinâmico com Sidebar ---
-st.markdown(f"""
-<style>
-    /* Fundo e texto principal */
-    .stApp {{
-        background-color: {bg_color};
-        color: {text_color};
-    }}
-
-    /* Sidebar */
-    [data-testid="stSidebar"] {{
-        background-color: {bg_color};
-        color: {text_color};
-        border-right: 1px solid #333;
-    }}
-
-    /* Títulos no sidebar */
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3, 
-    [data-testid="stSidebar"] h4,
-    [data-testid="stSidebar"] h5,
-    [data-testid="stSidebar"] h6 {{
-        color: {text_color} !important;
-    }}
-
-    /* Texto no sidebar */
-    [data-testid="stSidebar"] .css-1v3fvcr, 
-    [data-testid="stSidebar"] .css-1v02yyg,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] label {{
-        color: {text_color} !important;
-    }}
-
-    /* Inputs, checkboxes, selects no sidebar */
-    [data-testid="stSidebar"] .stCheckbox > label,
-    [data-testid="stSidebar"] .stRadio > label,
-    [data-testid="stSidebar"] .stSelectbox > label,
-    [data-testid="stSidebar"] .stTextInput > label,
-    [data-testid="stSidebar"] .stNumberInput > label {{
-        color: {text_color} !important;
-    }}
-
-    /* Inputs themselves */
-    [data-testid="stSidebar"] .stTextInput > div > div > input,
-    [data-testid="stSidebar"] .stNumberInput > div > div > input,
-    [data-testid="stSidebar"] .stSelectbox > div > div > div {{
-        background-color: {'#1E293B' if use_dark_mode else 'white'} !important;
-        color: {text_color} !important;
-        border: 1px solid #444;
-    }}
-
-    /* Botões */
-    .stButton>button {{
-        background-color: {primary_color};
-        color: white;
-        border: none;
-        border-radius: 5px;
-    }}
-    .stButton>button:hover {{
-        background-color: #1a6ec0;
-        color: white;
-    }}
-
-    /* Expander (info tooltips) */
-    .st-expander {{
-        background-color: {sec_bg};
-        border: 1px solid #444;
-    }}
-
-    /* Métricas */
-    .stMetricLabel, .stMetricValue {{
-        color: {text_color} !important;
-    }}
-</style>
-""", unsafe_allow_html=True)
-
 # --- URLs dos CSVs ---
 url_data = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_dataframe.csv"
 url_log = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_dataframe_log.csv"
+url_pcp = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_pcp_kpiv1.csv"
+url_pre = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_PRE_kpiv1.csv"
+url_mod = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_MOD_kpiv1.csv"
+url_almx = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_ALMX_kpiv1.csv"
 
 # --- Carregamento dos dados principais ---
 try:
@@ -154,12 +64,35 @@ except Exception as e:
 try:
     log = pd.read_csv(url_log.strip(), sep=',', encoding='utf-8')
     log['MES_ANO'] = log['MES_ANO'].astype(str)
-    # Garantir que SDOR esteja presente
     if 'SDOR' not in log.columns:
         log['SDOR'] = log['PPDTPP'] / log['ShiftFactor']
 except Exception as e:
-    st.warning("⚠️ Dados de capacidade não carregados. Digital Twin será baseado em projeção simples.")
+    st.warning("⚠️ Dados de capacidade não carregados.")
     log = None
+
+# --- Carregar dados dos setores (PCP, PRE, MOD, ALMX) ---
+def load_sector_data(url, name):
+    try:
+        df_sec = pd.read_csv(url, header=None, encoding='utf-8')
+        df_sec = df_sec.set_index(0).T
+        months = [
+            '2023-01', '2023-02', '2023-03', '2023-04', '2023-05', '2023-06',
+            '2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12',
+            '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06',
+            '2024-07', '2024-08', '2024-09', '2024-10', '2024-11', '2024-12',
+            '2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06', '2025-07'
+        ]
+        df_sec.index = months[:len(df_sec)]
+        df_sec.index.name = 'MES_ANO'
+        return df_sec
+    except Exception as e:
+        st.warning(f"⚠️ Erro ao carregar {name}: {e}")
+        return None
+
+pcp = load_sector_data(url_pcp, "PCP")
+pre = load_sector_data(url_pre, "Pré-Produção")
+mod = load_sector_data(url_mod, "MOD")
+almx = load_sector_data(url_almx, "Almoxarifado")
 
 # --- Métrica: QTD vs QTD_PONDERADA ---
 st.sidebar.markdown("### 📊 Métrica de Produção")
@@ -198,12 +131,19 @@ equipe_filtro_ativo = st.sidebar.checkbox("Filtrar por Equipe", value=False)
 equipes_selecionados = equipes_disponiveis if not equipe_filtro_ativo else st.sidebar.multiselect(
     "Equipe", equipes_disponiveis, default=equipes_disponiveis, key="equipe")
 
+# Filtro por Canal
+canal_disponiveis = sorted(df['CANAL'].dropna().unique())
+canal_filtro_ativo = st.sidebar.checkbox("Filtrar por Canal", value=False)
+canais_selecionados = canal_disponiveis if not canal_filtro_ativo else st.sidebar.multiselect(
+    "Canal", canal_disponiveis, default=canal_disponiveis, key="canal")
+
 # --- Filtragem do DataFrame ---
 mask = (
     (df['ANO_ENTREGA'].isin(anos_selecionados)) &
     (df['MES_ENTREGA'].isin(meses_selecionados)) &
     (df['RESPONSAVEL'].isin(responsavel_selecionados)) &
-    (df['EQUIPE'].isin(equipes_selecionados))
+    (df['EQUIPE'].isin(equipes_selecionados)) &
+    (df['CANAL'].isin(canais_selecionados))
 )
 df_filtrado = df[mask].copy()
 
@@ -248,12 +188,13 @@ col4.metric("Categoria Dominante", categoria_top)
 st.markdown("---")
 
 # --- Criar Abas ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Produção Diária",
-    "👥 Desempenho por Líder",
-    "📦 Produtos & Famílias",
+    "👥 Líderes & Equipes",
+    "📦 Produtos & Categorias",
     "📈 Análise Avançada",
-    "🔍 Projeções & Detalhes"
+    "💰 Digital Twin & Custos",
+    "📅 Comparativo Anual (2024 vs 2025)"
 ])
 
 # ====================
@@ -264,7 +205,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     # --- Produção Diária ---
     info_tooltip(
-        f"### Produção Diária com Média Móvel (7 dias) - {label_metrica}",
+        f"### 1. Produção Diária com Média Móvel (7 dias) - {label_metrica}",
         "Mostra a produção diária com uma linha de tendência (média móvel de 7 dias). "
         "Ajuda a identificar picos e quedas reais, filtrando ruídos diários."
     )
@@ -280,45 +221,30 @@ with tab1:
             xaxis_title="Data",
             yaxis_title="Quantidade",
             title_x=0.1,
-            hovermode='x unified',
-            template="plotly_dark" if use_dark_mode else "plotly_white"
+            hovermode='x unified'
         )
         st.plotly_chart(fig1, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir a produção diária.")
 
-    # --- Heatmap Mês x Equipe ---
-    info_tooltip(
-        f"### Produção por Mês e Equipe (Heatmap) - {label_metrica}",
-        "Mapa de calor com produção por mês e equipe. "
-        "Identifica sazonalidade e desempenho relativo."
-    )
-    if not df_filtrado.empty:
-        heat_month = df_filtrado.groupby(['MES_ENTREGA', 'EQUIPE'])[valor_coluna].sum().unstack(fill_value=0)
-        fig7 = px.imshow(heat_month, labels=dict(x="Equipe", y="Mês"), color_continuous_scale="Greens")
-        fig7.update_layout(title="Desempenho Mensal por Equipe", template="plotly_dark" if use_dark_mode else "plotly_white")
-        st.plotly_chart(fig7, use_container_width=True)
-    else:
-        st.info("Nenhum dado para exibir o heatmap mensal.")
-
     # --- Distribuição do Tamanho dos Lotes ---
     info_tooltip(
-        f"### Distribuição do Tamanho dos Lotes ({label_metrica})",
+        f"### 4. Distribuição do Tamanho dos Lotes ({label_metrica})",
         "Histograma que mostra como os tamanhos dos lotes estão distribuídos. "
         "Boxplot acima mostra outliers (valores extremos)."
     )
     if not df_filtrado.empty:
         fig4 = px.histogram(df_filtrado, x=valor_coluna, nbins=30, marginal="box", title=f"Distribuição do Tamanho dos Lotes de Produção ({label_metrica})")
-        fig4.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
+        fig4.update_layout(template="plotly_white")
         st.plotly_chart(fig4, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir a distribuição de lotes.")
 
-# --- Aba 2: Desempenho por Líder ---
+# --- Aba 2: Líderes & Equipes ---
 with tab2:
     # --- Top 5 Líderes ---
     info_tooltip(
-        f"### Top 5 Líderes por Volume - {label_metrica}",
+        f"### 3. Top 5 Líderes por Volume - {label_metrica}",
         "Os 5 líderes com maior volume de produção. "
         "Use para reconhecimento e análise de desempenho."
     )
@@ -327,45 +253,13 @@ with tab2:
         top_resp = top_resp.sort_values(valor_coluna, ascending=True)
         fig3 = px.bar(top_resp, x=valor_coluna, y='RESPONSAVEL', orientation='h', title="Top 5 Líderes por Volume", text=valor_coluna)
         fig3.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
-        fig3.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig3, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir os líderes.")
 
-    # --- Evolução por Líder ---
-    info_tooltip(
-        f"### Evolução da Produção por Líder ao Longo do Tempo ({label_metrica})",
-        "Linha por líder mostrando evolução mensal contínua (com ano). "
-        "Ajuda a ver tendências de crescimento ou queda."
-    )
-    if not df_filtrado.empty:
-        df_filtrado['ANO_MES_DT'] = pd.to_datetime(df_filtrado['MES_ANO'] + "-01", format='%Y-%m-%d', errors='coerce')
-        evolucao = df_filtrado.groupby(['ANO_MES_DT', 'RESPONSAVEL'])[valor_coluna].sum().reset_index()
-        evolucao = evolucao.sort_values('ANO_MES_DT')
-        fig5 = px.line(evolucao, x='ANO_MES_DT', y=valor_coluna, color='RESPONSAVEL', markers=True, title="Evolução da Produção por Líder")
-        fig5.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white", hovermode='x unified')
-        st.plotly_chart(fig5, use_container_width=True)
-    else:
-        st.info("Nenhum dado para exibir a evolução por líder.")
-
-    # --- Leaderboard Mensal ---
-    info_tooltip(
-        "### 🏆 Leaderboard Mensal por Produção",
-        "Mostra os 3 principais líderes por mês. Barras empilhadas mostram evolução do desempenho ao longo do tempo."
-    )
-    if not df_filtrado.empty:
-        leaderboard = df_filtrado.groupby(['MES_ANO', 'RESPONSAVEL'])[valor_coluna].sum().reset_index()
-        leaderboard = leaderboard.sort_values(['MES_ANO', valor_coluna], ascending=[True, False])
-        top3 = leaderboard.groupby('MES_ANO').head(3)
-        fig_lb = px.bar(top3, x=valor_coluna, y='MES_ANO', color='RESPONSAVEL', orientation='h', title="Top 3 Líderes por Mês")
-        fig_lb.update_layout(barmode='stack', template="plotly_dark" if use_dark_mode else "plotly_white")
-        st.plotly_chart(fig_lb, use_container_width=True)
-    else:
-        st.info("Nenhum dado para leaderboard.")
-
     # --- Frequência de OS por Líder ---
     info_tooltip(
-        f"### Frequência de OS por Líder ({label_metrica})",
+        f"### 9. Frequência de OS por Líder ({label_metrica})",
         "Número total de OS por líder (não volume). "
         "Mostra engajamento e distribuição de carga."
     )
@@ -374,16 +268,30 @@ with tab2:
         os_count = os_count.sort_values('OS Count', ascending=True)
         fig9 = px.bar(os_count, x='OS Count', y='RESPONSAVEL', orientation='h', title="Número de OS por Líder (Frequência)", text='OS Count')
         fig9.update_traces(texttemplate='%{text}', textposition='outside')
-        fig9.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig9, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir frequência por líder.")
 
-# --- Aba 3: Produtos & Famílias ---
+    # --- Leaderboard Mensal ---
+    info_tooltip(
+        "### 🏆 7. Leaderboard Mensal por Produção",
+        "Mostra os 3 principais líderes por mês. Barras empilhadas mostram evolução do desempenho ao longo do tempo."
+    )
+    if not df_filtrado.empty:
+        leaderboard = df_filtrado.groupby(['MES_ANO', 'RESPONSAVEL'])[valor_coluna].sum().reset_index()
+        leaderboard = leaderboard.sort_values(['MES_ANO', valor_coluna], ascending=[True, False])
+        top3 = leaderboard.groupby('MES_ANO').head(3)
+        fig_lb = px.bar(top3, x=valor_coluna, y='MES_ANO', color='RESPONSAVEL', orientation='h', title="Top 3 Líderes por Mês")
+        fig_lb.update_layout(barmode='stack')
+        st.plotly_chart(fig_lb, use_container_width=True)
+    else:
+        st.info("Nenhum dado para leaderboard.")
+
+# --- Aba 3: Produtos & Categorias ---
 with tab3:
     # --- Representatividade por Família ---
     info_tooltip(
-        f"### Representatividade por Família ({label_metrica})",
+        f"### 🔥 Representatividade por Família ({label_metrica})",
         "Mostra a participação de cada família de produtos na produção total. "
         "Ajuda a identificar quais famílias são mais relevantes e merecem foco."
     )
@@ -391,14 +299,27 @@ with tab3:
         fam = df_filtrado.groupby('FAMILIA')[valor_coluna].sum().reset_index().sort_values(valor_coluna, ascending=False)
         fig_fam_pie = px.pie(fam, names='FAMILIA', values=valor_coluna, title="Distribuição por Família", hole=0.4)
         fig_fam_pie.update_traces(textinfo='percent+label', textposition='inside')
-        fig_fam_pie.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig_fam_pie, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir por família.")
 
+    # --- Produção por Canal de Venda ---
+    info_tooltip(
+        f"### 6. Produção por Canal de Venda ({label_metrica})",
+        "Gráfico de pizza mostrando a participação de cada canal (Site, Atacado, etc). "
+        "Ajuda a entender de onde vem a demanda."
+    )
+    if not df_filtrado.empty:
+        canal = df_filtrado.groupby('CANAL')[valor_coluna].sum().reset_index()
+        fig6 = px.pie(canal, names='CANAL', values=valor_coluna, title="Distribuição da Produção por Canal de Venda", hole=0.4)
+        fig6.update_traces(textinfo='percent+label')
+        st.plotly_chart(fig6, use_container_width=True)
+    else:
+        st.info("Nenhum dado para exibir por canal.")
+
     # --- Tamanho Médio do Lote por Categoria ---
     info_tooltip(
-        f"### Tamanho Médio do Lote por Categoria ({label_metrica})",
+        f"### 8. Tamanho Médio do Lote por Categoria ({label_metrica})",
         "Mostra o tamanho médio dos lotes por categoria. "
         "Ajuda a entender complexidade e planejamento."
     )
@@ -407,35 +328,19 @@ with tab3:
         avg_qtd = avg_qtd.sort_values(valor_coluna, ascending=True)
         fig8 = px.bar(avg_qtd, x=valor_coluna, y='CATEGORIA_CONVERSOR', orientation='h', title="Tamanho Médio do Lote por Categoria", text=valor_coluna)
         fig8.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
-        fig8.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig8, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir o tamanho médio por categoria.")
 
-    # --- Produção por Canal de Venda ---
-    info_tooltip(
-        f"### Produção por Canal de Venda ({label_metrica})",
-        "Gráfico de pizza mostrando a participação de cada canal (Site, Atacado, etc). "
-        "Ajuda a entender de onde vem a demanda."
-    )
-    if not df_filtrado.empty:
-        canal = df_filtrado.groupby('CANAL')[valor_coluna].sum().reset_index()
-        fig6 = px.pie(canal, names='CANAL', values=valor_coluna, title="Distribuição da Produção por Canal de Venda", hole=0.4)
-        fig6.update_traces(textinfo='percent+label')
-        fig6.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
-        st.plotly_chart(fig6, use_container_width=True)
-    else:
-        st.info("Nenhum dado para exibir por canal.")
-
     # --- Boxplot da QTD por Categoria ---
     info_tooltip(
-        f"### Distribuição da {label_metrica} por Categoria (Boxplot)",
+        f"### 12. Distribuição da {label_metrica} por Categoria (Boxplot)",
         "Boxplot mostra mediana, quartis e outliers por categoria. "
         "Ajuda a comparar variabilidade entre categorias."
     )
     if not df_filtrado.empty:
         fig12 = px.box(df_filtrado, x='CATEGORIA_CONVERSOR', y=valor_coluna, color='CATEGORIA_CONVERSOR', title="Distribuição da Quantidade por Categoria")
-        fig12.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white", showlegend=False)
+        fig12.update_layout(showlegend=False)
         st.plotly_chart(fig12, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir o boxplot.")
@@ -444,7 +349,7 @@ with tab3:
 with tab4:
     # --- CFD ---
     info_tooltip(
-        "### 📈 Fluxo Cumulativo de Produção",
+        "### 📈 1. Fluxo Cumulativo de Produção",
         "Mostra a produção total acumulada ao longo do tempo. "
         "A inclinação da linha indica a velocidade de produção: mais íngreme = mais produtivo. "
         "Ideal para identificar acelerações ou desacelerações."
@@ -454,14 +359,14 @@ with tab4:
         cfd = cfd.sort_values('DATA_DE_ENTREGA')
         cfd['Acumulado'] = cfd[valor_coluna].cumsum()
         fig_cfd = px.area(cfd, x='DATA_DE_ENTREGA', y='Acumulado', title="Fluxo Cumulativo de Produção ao Longo do Tempo")
-        fig_cfd.update_layout(hovermode='x unified', template="plotly_dark" if use_dark_mode else "plotly_white")
+        fig_cfd.update_layout(hovermode='x unified')
         st.plotly_chart(fig_cfd, use_container_width=True)
     else:
         st.info("Nenhum dado para exibir o CFD.")
 
     # --- Pareto por Líder ---
     info_tooltip(
-        "### 🎯 Análise de Pareto: 80/20 dos Líderes",
+        "### 🎯 2. Análise de Pareto: 80/20 dos Líderes",
         "Os líderes são ordenados do maior para o menor produtor. "
         "A linha vermelha em 80% mostra onde os principais 20% dos líderes terminam. "
         "Ajuda a identificar os maiores contribuidores e dependências."
@@ -471,50 +376,13 @@ with tab4:
         pareto['cumsum'] = pareto[valor_coluna].cumsum() / pareto[valor_coluna].sum() * 100
         fig_pareto = px.line(pareto, x='RESPONSAVEL', y='cumsum', markers=True, title="Acumulado de Produção por Líder (Regra 80/20)")
         fig_pareto.add_hline(y=80, line_dash="dash", line_color="red", annotation_text="80%")
-        fig_pareto.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig_pareto, use_container_width=True)
     else:
         st.info("Nenhum dado para análise de Pareto.")
 
-    # --- Anomaly Detection ---
-    info_tooltip(
-        "###  Detecção de Anomalias (Z-Score > 3)",
-        "Identifica OSs com tamanho atípico (muito maiores ou menores que a média). "
-        "Z-Score > 3 indica um outlier. Pode ser erro de digitação ou oportunidade de otimização."
-    )
-    if not df_filtrado.empty:
-        z_scores = np.abs((df_filtrado[valor_coluna] - df_filtrado[valor_coluna].mean()) / (df_filtrado[valor_coluna].std() + 1e-6))
-        anomalias = df_filtrado[z_scores > 3].copy()
-        anomalias['Z_Score'] = z_scores[z_scores > 3]
-        if not anomalias.empty:
-            st.dataframe(anomalias[['OS', 'PRODUTO', valor_coluna, 'Z_Score', 'DATA_DE_ENTREGA']].round(2))
-        daily = df_filtrado.groupby('DATA_DE_ENTREGA')[valor_coluna].sum().reset_index()
-        fig_anom = px.scatter(daily, x='DATA_DE_ENTREGA', y=valor_coluna, title="Produção Diária com Detecção de Anomalias")
-        if not anomalias.empty:
-            daily_anom = anomalias.groupby('DATA_DE_ENTREGA')[valor_coluna].sum().reset_index()
-            fig_anom.add_scatter(x=daily_anom['DATA_DE_ENTREGA'], y=daily_anom[valor_coluna], mode='markers', marker=dict(size=12, color='red'), name='Anomalia')
-        fig_anom.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
-        st.plotly_chart(fig_anom, use_container_width=True)
-    else:
-        st.info("Nenhum dado para detecção de anomalias.")
-
-    # --- Scatter: Frequência vs. Tamanho do Lote por Equipe ---
-    info_tooltip(
-        f"### Frequência vs. Tamanho do Lote por Equipe ({label_metrica})",
-        "Gráfico de dispersão: quanto maior o ponto, mais OS a equipe fez. "
-        "Equipes no canto superior direito são altamente produtivas."
-    )
-    if not df_filtrado.empty:
-        scatter_data = df_filtrado.groupby('EQUIPE').agg(OS_Count=('OS', 'size'), Avg_QTD=(valor_coluna, 'mean')).reset_index()
-        fig10 = px.scatter(scatter_data, x='OS_Count', y='Avg_QTD', size='OS_Count', color='EQUIPE', title="Frequência de OS vs. Tamanho Médio do Lote por Equipe")
-        fig10.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
-        st.plotly_chart(fig10, use_container_width=True)
-    else:
-        st.info("Nenhum dado para exibir o gráfico de dispersão.")
-
     # --- Sazonalidade ---
     info_tooltip(
-        "###  Sazonalidade: Produção por Mês e Ano",
+        "### 🌡️ 4. Sazonalidade: Produção por Mês e Ano",
         "Mapa de calor que mostra a produção em cada mês de cada ano. "
         "Células mais escuras indicam maior produção. Útil para identificar padrões sazonais."
     )
@@ -522,24 +390,24 @@ with tab4:
         season = df_filtrado.groupby(['ANO_ENTREGA', 'MES_ENTREGA'])[valor_coluna].sum().reset_index()
         season_pivot = season.pivot(index='ANO_ENTREGA', columns='MES_ENTREGA', values=valor_coluna).fillna(0)
         fig_season = px.imshow(season_pivot, color_continuous_scale="Reds", title="Calor da Produção por Mês e Ano")
-        fig_season.update_layout(template="plotly_dark" if use_dark_mode else "plotly_white")
         st.plotly_chart(fig_season, use_container_width=True)
     else:
         st.info("Nenhum dado para mapa de sazonalidade.")
 
-# --- Aba 5: Tabelas & Detalhes ---
+# --- Aba 5: Digital Twin & Custos ---
 with tab5:
-    # --- Digital Twin ---
-    info_tooltip(
-        "### Digital Twin: Projeção por Mês",
-        "Simula a produção futura mês a mês com parâmetros personalizados. "
-        "Ajuste número de funcionários, dias úteis e turno. "
-        "Baseado no SDOR (Produtividade Padrão por Funcionário por Dia), ajustado por turno."
-    )
-    if log is not None and not df_filtrado.empty and len(log) > 0:
+    st.markdown("### 💡 Digital Twin: Projeção com Custo de Mão de Obra (MOD)")
+
+    if log is not None and not df_filtrado.empty:
         sdor_base = log['SDOR'].tail(3).mean() if len(log) >= 3 else log['SDOR'].iloc[-1]
         st.markdown(f"**📊 Produtividade Base (SDOR):** {sdor_base:.1f} unidades por funcionário por dia")
-        st.markdown("*Valor ajustado para remover o efeito do turno. Serve como base para projeções.*")
+
+        # Extrair custo unitário de MOD
+        custo_unit_mod = 12.50
+        if mod is not None and 'Custo Unitário Médio de Fabricação' in mod.columns:
+            custo_unit_mod = pd.to_numeric(mod.loc[:, 'Custo Unitário Médio de Fabricação'], errors='coerce').tail(3).mean()
+        st.markdown(f"**🧮 Custo Unitário de Mão de Obra (MOD):** R$ {custo_unit_mod:.2f}")
+        st.markdown("---")
 
         last_date = df_filtrado['DATA_DE_ENTREGA'].max()
         next_months = pd.date_range(last_date, periods=4, freq='MS')[1:4]
@@ -558,11 +426,12 @@ with tab5:
                 turno = st.selectbox(f"Turno", ["1 Turno", "2 Turno", "1 Turno Com Extra"], index=0, key=f"turno_{i}")
                 shift_factor = shift_map[turno]
                 proj_qtd = sdor_base * shift_factor * func * dias
+                custo_total = proj_qtd * custo_unit_mod
                 proj_data.append({
                     "MES_ANO": next_months[i].strftime('%Y-%m'),
                     "Produção": round(proj_qtd),
-                    "Tipo": "Projeção",
-                    "Turno": turno
+                    "Custo Mão de Obra (R$)": round(custo_total, 2),
+                    "Tipo": "Projeção"
                 })
 
         hist = df_filtrado.groupby('MES_ANO')[valor_coluna].sum().reset_index()
@@ -585,40 +454,88 @@ with tab5:
         )
         fig_sim.update_layout(
             xaxis=dict(tickformat="%b %Y", dtick="M1"),
-            hovermode='x unified',
-            template="plotly_dark" if use_dark_mode else "plotly_white"
+            hovermode='x unified'
         )
         st.plotly_chart(fig_sim, use_container_width=True)
 
         st.markdown("### 📋 Resumo da Projeção")
         proj_df = pd.DataFrame(proj_data)
         proj_df['Produção'] = proj_df['Produção'].map('{:,.0f}'.format)
-        st.dataframe(proj_df[['MES_ANO', 'Produção', 'Turno']].rename(columns={
+        proj_df['Custo Mão de Obra (R$)'] = proj_df['Custo Mão de Obra (R$)'].map('R$ {:,.2f}'.format)
+        st.dataframe(proj_df[['MES_ANO', 'Produção', 'Custo Mão de Obra (R$)']].rename(columns={
             "MES_ANO": "Mês",
             "Produção": "Produção Projetada",
-            "Turno": "Turno"
+            "Custo Mão de Obra (R$)": "Custo MO"
         }))
-    else:
-        st.info("Dados de capacidade não disponíveis. Preencha `updated_dataframe_log.csv`.")
 
-    # --- Tabela Interativa ---
-    info_tooltip(
-        "### Tabela Interativa com Filtros",
-        "Tabela completa dos dados filtrados. Clique nos títulos para ordenar por coluna. "
-        "Use os filtros laterais para focar em um período, líder ou equipe."
+        # --- Custo por Produto ---
+        st.markdown("### 💰 Custo de Mão de Obra por Produto")
+        if not df_filtrado.empty:
+            labor_data = df_filtrado.groupby('PRODUTO').agg(
+                QTD_Total=('QTD', 'sum'),
+                FAMILIA=('FAMILIA', 'first')
+            ).reset_index()
+            labor_data['Custo Unitário (R$)'] = custo_unit_mod
+            labor_data['Custo Total (R$)'] = labor_data['QTD_Total'] * custo_unit_mod
+            labor_data = labor_data.sort_values('Custo Total (R$)', ascending=False)
+            st.dataframe(
+                labor_data.head(20)[['PRODUTO', 'FAMILIA', 'QTD_Total', 'Custo Unitário (R$)', 'Custo Total (R$)']].round(2),
+                use_container_width=True
+            )
+    else:
+        st.info("Dados insuficientes para executar o Digital Twin.")
+
+# --- Aba 6: Comparativo Anual (2024 vs 2025) ---
+with tab6:
+    st.markdown("### 📅 Comparativo Anual: 2024 vs 2025")
+
+    df_2024 = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2024]
+    df_2025 = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2025]
+
+    total_2024 = df_2024[valor_coluna].sum() if not df_2024.empty else 0
+    total_2025 = df_2025[valor_coluna].sum() if not df_2025.empty else 0
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Produção Total 2024", f"{total_2024:,.0f}")
+    col2.metric("Produção Total 2025", f"{total_2025:,.0f}")
+    if total_2024 > 0:
+        crescimento = ((total_2025 - total_2024) / total_2024) * 100
+        col3.metric("Crescimento (%)", f"{crescimento:+.1f}%")
+    else:
+        col3.metric("Crescimento (%)", "N/A")
+
+    # --- Produção Mensal por Ano ---
+    mensal_2024 = df_2024.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index()
+    mensal_2024['ANO'] = 2024
+    mensal_2025 = df_2025.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index()
+    mensal_2025['ANO'] = 2025
+    combined = pd.concat([mensal_2024, mensal_2025], ignore_index=True)
+
+    fig_yoy = px.line(
+        combined,
+        x='MES_ENTREGA',
+        y=valor_coluna,
+        color='ANO',
+        markers=True,
+        title="Produção Mensal: 2024 vs 2025",
+        labels={'MES_ENTREGA': 'Mês', valor_coluna: 'Quantidade'}
     )
-    if not df_filtrado.empty:
-        cols_show = ['OS', 'PRODUTO', 'QTD', 'QTD_PONDERADA', 'DATA_DE_ENTREGA', 'EQUIPE', 'RESPONSAVEL', 'CANAL', 'FAMILIA']
-        st.dataframe(df_filtrado[cols_show].sort_values('DATA_DE_ENTREGA', ascending=False), use_container_width=True)
-    else:
-        st.info("Nenhum dado para exibir.")
+    fig_yoy.update_layout(hovermode='x unified')
+    st.plotly_chart(fig_yoy, use_container_width=True)
 
-    # --- Tabela Detalhada ---
-    st.subheader("📋 Dados Detalhados")
-    if not df_filtrado.empty:
-        st.dataframe(df_filtrado[['OS', 'PRODUTO', 'QTD', 'QTD_PONDERADA', 'DATA_DE_ENTREGA', 'EQUIPE', 'RESPONSAVEL']].sort_values('DATA_DE_ENTREGA', ascending=False))
-    else:
-        st.info("Nenhum dado corresponde aos filtros selecionados.")
+    # --- Top 5 Produtos por Ano ---
+    st.markdown("#### Top 5 Produtos por Ano")
+    col1, col2 = st.columns(2)
+    with col1:
+        if not df_2024.empty:
+            top2024 = df_2024.groupby('PRODUTO')[valor_coluna].sum().nlargest(5).reset_index()
+            st.markdown("**2024**")
+            st.dataframe(top2024)
+    with col2:
+        if not df_2025.empty:
+            top2025 = df_2025.groupby('PRODUTO')[valor_coluna].sum().nlargest(5).reset_index()
+            st.markdown("**2025**")
+            st.dataframe(top2025)
 
 # --- Diagnóstico Final ---
 st.markdown("---")
