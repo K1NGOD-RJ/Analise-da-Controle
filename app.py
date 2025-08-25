@@ -9,14 +9,14 @@ import numpy as np
 st.set_page_config(page_title="🏭 Dashboard Científico de Produção", layout="wide")
 
 # --- URLs dos CSVs (CORRETAS E ATUALIZADAS) ---
-url_data = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_dataframe.csv"
+url_data = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/main/updated_dataframe.csv    "
 
-url_log = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_dataframe_log.csv"
+url_log = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_dataframe_log.csv    "
 
-url_pcp = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_pcp_kpiv1.csv"
-url_pre = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_PRE_kpiv1.csv"
-url_mod = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_MOD_kpiv1.csv"
-url_almx = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_ALMX_kpiv1.csv"
+url_pcp = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_pcp_kpiv1.csv    "
+url_pre = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_PRE_kpiv1.csv    "
+url_mod = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_MOD_kpiv1.csv    "
+url_almx = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_ALMX_kpiv1.csv    "
 
 # --- Carregar dados principais: OS (updated_dataframe.csv) ---
 try:
@@ -309,7 +309,7 @@ with tab5:
     st.markdown("### 💡 Digital Twin: Projeção com Custo Detalhado e Dificuldade Ajustada")
 
     # --- URLs ---
-    DATA_URL = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_dataframe_log.csv"
+    DATA_URL = "https://raw.githubusercontent.com/K1NGOD-RJ/Analise-da-Controle/refs/heads/main/updated_dataframe_log.csv    "
 
     if mod is None or df_filtrado.empty:
         st.info("Dados insuficientes para executar o Digital Twin.")
@@ -561,34 +561,86 @@ with tab5:
 
 # --- Aba 6: Comparativo Anual ---
 with tab6:
-    st.markdown("### 📅 Comparativo Anual: 2024 vs 2025")
-    df_2024 = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2024]
-    df_2025 = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2025]
-    total_2024 = df_2024[valor_coluna].sum() if not df_2024.empty else 0
-    total_2025 = df_2025[valor_coluna].sum() if not df_2025.empty else 0
+    st.markdown("### 📅 Comparativo Anual: 2024 vs 2025 (dados até Julho)")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Produção Total 2024", f"{total_2024:,.0f}")
-    col2.metric("Produção Total 2025", f"{total_2025:,.0f}")
-    crescimento = f"{((total_2025 - total_2024) / total_2024) * 100:+.1f}%" if total_2024 > 0 else "N/A"
-    col3.metric("Crescimento (%)", crescimento)
+    # Filtrar por ano e até julho
+    df_2024_full = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2024]
+    df_2025_full = df_filtrado[df_filtrado['ANO_ENTREGA'] == 2025]
 
-    mensal_2024 = df_2024.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index(); mensal_2024['ANO'] = 2024
-    mensal_2025 = df_2025.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index(); mensal_2025['ANO'] = 2025
+    # Dados reais: Jan–Jul
+    df_2024 = df_2024_full[df_2024_full['MES_ENTREGA'] <= 7]
+    df_2025 = df_2025_full[df_2025_full['MES_ENTREGA'] <= 7]
+
+    total_2024_real = df_2024[valor_coluna].sum() if not df_2024.empty else 0
+    total_2025_real = df_2025[valor_coluna].sum() if not df_2025.empty else 0
+
+    # Projeção para 2025 (extrapolação linear)
+    if not df_2025.empty and df_2025[valor_coluna].sum() > 0:
+        meses_reais = len(df_2025['MES_ENTREGA'].unique())
+        projecao_anual_2025 = (total_2025_real / meses_reais) * 12
+    else:
+        projecao_anual_2025 = 0
+
+    # Total real de 2024 (completo)
+    total_2024_completo = df_2024_full[valor_coluna].sum() if not df_2024_full.empty else 0
+
+    # Métricas
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("2024 Real (Jan–Dez)", f"{total_2024_completo:,.0f}")
+    col2.metric("2025 Real (Jan–Jul)", f"{total_2025_real:,.0f}")
+    col3.metric("2025 Projetado (Full Year)", f"{projecao_anual_2025:,.0f}")
+    crescimento_vs_2024 = f"{((projecao_anual_2025 - total_2024_completo) / total_2024_completo) * 100:+.1f}%" if total_2024_completo > 0 else "N/A"
+    col4.metric("Crescimento Estimado", crescimento_vs_2024)
+
+    st.info(f"💡 Projeção 2025 = Média mensal (Jan–Jul) × 12 meses")
+
+    # --- Gráfico: Produção Mensal com Projeção ---
+    mensal_2024 = df_2024.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index()
+    mensal_2024['ANO'] = 2024
+
+    mensal_2025_real = df_2025.groupby('MES_ENTREGA')[valor_coluna].sum().reset_index()
+    mensal_2025_real['ANO'] = "2025 (Real)"
+
+    # Criar projeção para 2025 (agosto a dezembro)
+    if not df_2025.empty:
+        media_mensal_2025 = total_2025_real / len(mensal_2025_real)
+        projecao = []
+        for mes in range(8, 13):
+            projecao.append({'MES_ENTREGA': mes, valor_coluna: media_mensal_2025, 'ANO': '2025 (Projetado)'})
+        df_projecao = pd.DataFrame(projecao)
+        mensal_2025 = pd.concat([mensal_2025_real, df_projecao], ignore_index=True)
+    else:
+        mensal_2025 = mensal_2025_real
+        mensal_2025['ANO'] = "2025 (Real)"
+
+    # Combinar dados
     combined = pd.concat([mensal_2024, mensal_2025], ignore_index=True)
-    fig_yoy = px.line(combined, x='MES_ENTREGA', y=valor_coluna, color='ANO', markers=True, title="Produção Mensal: 2024 vs 2025")
+
+    fig_yoy = px.bar(
+        combined,
+        x='MES_ENTREGA',
+        y=valor_coluna,
+        color='ANO',
+        barmode='group',
+        title="Produção Mensal: 2024 vs 2025 (com Projeção)",
+        labels={valor_coluna: "Quantidade", "MES_ENTREGA": "Mês"}
+    )
+    fig_yoy.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=1))
     st.plotly_chart(fig_yoy, use_container_width=True)
 
-    st.markdown("#### Top 5 Produtos por Ano")
+    # --- Top 5 Produtos (Jan–Jul) ---
+    st.markdown("#### Top 5 Produtos (Jan–Jul)")
     col1, col2 = st.columns(2)
     with col1:
         if not df_2024.empty:
             top2024 = df_2024.groupby('PRODUTO')[valor_coluna].sum().nlargest(5).reset_index()
-            st.markdown("**2024**"); st.dataframe(top2024)
+            st.markdown("**2024**")
+            st.dataframe(top2024)
     with col2:
         if not df_2025.empty:
             top2025 = df_2025.groupby('PRODUTO')[valor_coluna].sum().nlargest(5).reset_index()
-            st.markdown("**2025**"); st.dataframe(top2025)
+            st.markdown("**2025**")
+            st.dataframe(top2025)
 
 # --- Diagnóstico Final ---
 st.markdown("---")
